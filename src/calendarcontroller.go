@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,13 +21,12 @@ func (c *CalendarController) AddController(router *mux.Router, s *Server) {
 	c.Srv = s
 	router.Methods("GET").Path("/calendar/get/{noDays}").Name("GetCalendars").
 		Handler(Logger(c, http.HandlerFunc(c.handleGetCalendars)))
-
 }
 
 func (c *CalendarController) handleGetCalendars(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	d := vars["noDays"]
-	noDays := 3
+	noDays := 4
 	if d != "" {
 		if i, err := strconv.Atoi(d); err == nil {
 			noDays = i
@@ -52,17 +52,27 @@ func (c *CalendarController) handleGetCalendars(w http.ResponseWriter, r *http.R
 		return el[i].Start.After(el[j].Start)
 	})
 
+	if b, err := json.Marshal(el); err != nil {
+		m := fmt.Sprintf("Error serializing calendar events. %s", err.Error())
+		c.LogError(m)
+		http.Error(w, m, 500)
+	} else {
+		w.Header().Set("content-type", "application/json")
+		w.Write(b)
+	}
 }
 
 func (c *CalendarController) getCalendarProvider(cc CalConfig) (CalendarProvider, error) {
 	switch cc.Provider {
-	case 0:
+	case "Google":
 		// Google Calendar
 		gc := new(GCalendar)
 		gc.SetConfig(cc)
 		return gc, nil
 	default:
-		return nil, errors.New("Invalid Calendar provider")
+		m := fmt.Sprintf("Invalid Calendar provider '%s'", cc.Provider)
+		c.LogError(m)
+		return nil, errors.New(m)
 	}
 }
 

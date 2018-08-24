@@ -4,91 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Configure Weather Service</title>
+    <title>Configure Calendar Service</title>
 
     <link rel="stylesheet" href="assets/css/uikit.min.css" />
+    <link rel="stylesheet" href="assets/css/all.min.css" />
+    <link rel="stylesheet" href="assets/css/solid.min.css" />
+
     <script src="assets/js/uikit.min.js"></script>
     <script src="assets/js/uikit-icons.min.js"></script>
     <script src="assets/js/jquery-3.3.1.min.js"></script>
 </head>
 <body class="uk-height-1-1">
-    <form id="configform" class="uk-form-horizontal uk-margin-top uk-margin-left" action="/config/set" method="POST">
-        <fieldset class="uk-fieldset uk-margin-top">
-            <legend class="uk-legend">Location</legend>
+    <div class="uk-margin">
+        <fieldset class="uk-fieldset uk-margin-top uk-margin-left uk-margin-right">
+            <legend class="uk-legend">Calendars</legend>
             <div class="uk-margin">
-                <label class="uk-form-label" for="locationname">
-                    Location Name
-                </label>
-                <div class="uk-form-controls">
-                    <input class="uk-input uk-form-width-large" id="locationname" name="locationname" type="text" placeholder="Location Name" value="{{.LocationName}}">
-                </div>
+                <button class="uk-button uk-button-primary uk-button-small" title="Add New Calendar" uk-toggle="target: #newCalendarModal">
+                    <i class="fas fa-plus fa-lg"></i>
+                </button>
             </div>
-            <div class="uk-margin">
-                <label class="uk-form-label" for="latitude">
-                    Latitude
-                </label>
-                <div class="uk-form-controls">
-                    <input class="uk-input uk-form-width-large" id="latitude" name="latitude" type="text" placeholder="Latitude" value="{{.Latitude}}">
-                </div>
-            </div>
-            <div class="uk-margin">
-                <label class="uk-form-label" for="longitude">
-                    Longitude
-                </label>
-                <div class="uk-form-controls">
-                    <input class="uk-input uk-form-width-large" id="longitude" name="longitude" type="text" placeholder="Longitude" value="{{.Longitude}}">
-                </div>
-            </div>
+            <table class="uk-table uk-table-small uk-table-divider uk-width-4-5">
+                <thead>
+                    <tr>
+                        <th class="uk-table-expand">Name</th>
+                        <th class="uk-table-small">Provider</th>
+                        <th class="uk-table-small">Colour</th>
+                        <th class="uk-table-small"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Calendars}}
+                        <tr>
+                            <td>{{.Name}}</td>
+                            <td>{{.Provider}}</td>
+                            <td>
+                                <div style="background-color: {{.Colour}}; color: {{.Colour}}">.</div>
+                            </td>
+                            <td>
+                                <span>
+                                    <button class="uk-button uk-button-primary uk-button-small" title="Edit Calendar" onclick="onEditClick({{.ID}})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="uk-button uk-button-danger uk-button-small" title="Remove Calendar" onclick="onRemoveClick({{.ID}})">
+                                            <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </span>
+                            </td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
         </fieldset>
-        <fieldset class="uk-fieldset uk-margin-top">
-            <legend class="uk-legend">Provider</legend>
-            <div class="uk-margin">
-                <label class="uk-form-label" for="provider">
-                    Weather Provider
-                </label>
-                <div class="uk-form-controls">
-                    <Select class="uk-select uk-form-width-large" id="provider" name="provider">
-                        <option value="0">Open Weather</option>
-                        <option value="1">AccuWeather</option>
-                    </Select>
-                </div>
+    </div>  
+    <div id="newCalendarModal" class="uk-modal-container" uk-modal>
+        <div class="uk-modal-dialog ">
+            <button class="uk-modal-close-default" type="button" uk-close></button>
+            <div class="uk-modal-header">
+                <h2 class="uk-modal-title">Add New Calendar</h2>
             </div>
-            <div class="uk-margin">
-                <label class="uk-form-label" for="appid">
-                    Application ID
-                </label>
-                <div class="uk-form-controls">
-                    <input class="uk-input uk-form-width-large" id="appid" name="appid" type="text" placeholder="Application ID" value="{{.AppID}}">
-                </div>
+            <div class="uk-modal-body">
+                <form id="addform" class="uk-form-horizontal uk-margin-top uk-margin-left" action="/config/add" method="POST">
+                    <label class="uk-form-label" for="addName">
+                        Calendar Name
+                    </label>
+                    <div class="uk-form-controls">
+                        <input class="uk-input uk-form-width-large" id="addName" name="addName" type="text" placeholder="Calendar Name">
+                    </div>
+                    <div class="uk-margin">
+                        <label class="uk-form-label" for="addColour">
+                            Colour
+                        </label>
+                        <div class="uk-form-controls">
+                            <Select class="uk-select uk-form-width-large" id="addColour" name="addColour">
+                                <option value="Red">Red</option>
+                                <option value="Orange">Orange</option>
+                                <option value="Yellow">Yellow</option>
+                                <option value="Tan">Tan</option>
+                                <option value="Chocolate">Chocolate</option>
+                                <option value="Lime">Lime</option>
+                                <option value="SkyBlue">Sky Blue</option>
+                                <option value="Violet">Violet</option>
+                                <option value="LightPink">Light Pink</option>
+                            </Select>
+                        </div>
+                    </div>
+                    <div class="uk-margin">
+                        <label class="uk-form-label" for="addProvider">
+                            Calendar Provider
+                        </label>
+                        <div class="uk-form-controls">
+                            <Select class="uk-select uk-form-width-large" id="addProvider" name="addProvider">
+                                <option value="Google">Google Calendar</option>
+                            </Select>
+                        </div>
+                    </div>
+                    <fieldset class="uk-fieldset uk-margin-top">
+                        <legend class="uk-legend">Google Calendar</legend>
+                        <div class="uk-margin">
+                            <button class="uk-button uk-button-default" type="button" onclick="onGoogleAuthenticate()">Select Google Calendar</button>
+                        </div>
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="addGoogleCode">
+                                Authentication Code
+                            </label>
+                            <div class="uk-form-controls">
+                                <input class="uk-input uk-form-width-large" id="addGoogleCode" name="addGoogleCode" type="text" placeholder="Paste Authentication Code Here">
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="uk-fieldset uk-margin-top">
+                        <button class="uk-button uk-button-primary">Create Calendar</button>
+                    </fieldset>
+                </form>
             </div>
-            <div class="uk-margin">
-                <label class="uk-form-label" for="unittype">
-                    Unit of Measure
-                </label>
-                <div class="uk-form-controls">
-                    <Select class="uk-select uk-form-width-large" id="unittype" name="unittype">
-                        <option value="0">Celcius</option>
-                        <option value="1">Farenheit</option>
-                    </Select>
-                </div>
+        </div>
+    </div>
+    <div id="updCalendarModal" class="uk-modal-container" uk-modal>
+        <div class="uk-modal-dialog ">
+            <button class="uk-modal-close-default" type="button" uk-close></button>
+            <div class="uk-modal-header">
+                <h2 class="uk-modal-title">Edit Calendar</h2>
             </div>
-        </fieldset>
-        <fieldset class="uk-fieldset uk-margin-top">
-            <input class="uk-button uk-button-primary" type="submit" value="Save Changes">
-        </fieldset>
-    </form>
-    
-    <script type="text/javascript">
-        var frm = $('#configform')
-        frm.submit(function(e) {
+            <div class="uk-modal-body">
+                <form id="updform" class="uk-form-horizontal uk-margin-top uk-margin-left" action="/config/update" method="POST">
+                    <label class="uk-form-label" for="updID">
+                        Calendar ID
+                    </label>
+                    <div class="uk-form-controls">
+                        <input class="uk-input uk-form-width-large" id="updID" name="updID" type="text" readonly="readonly">
+                    </div>
+                    <div class="uk-margin">
+                    <label class="uk-form-label" for="updName">
+                            Calendar Name
+                        </label>
+                        <div class="uk-form-controls">
+                            <input class="uk-input uk-form-width-large" id="updName" name="updName" type="text" placeholder="Calendar Name">
+                        </div>
+                    </div>  
+                    <div class="uk-margin">
+                        <label class="uk-form-label" for="updColour">
+                            Colour
+                        </label>
+                        <div class="uk-form-controls">
+                            <Select class="uk-select uk-form-width-large" id="updColour" name="updColour">
+                                <option value="Red">Red</option>
+                                <option value="Orange">Orange</option>
+                                <option value="Yellow">Yellow</option>
+                                <option value="Tan">Tan</option>
+                                <option value="Chocolate">Chocolate</option>
+                                <option value="Lime">Lime</option>
+                                <option value="SkyBlue">Sky Blue</option>
+                                <option value="Violet">Violet</option>
+                                <option value="LightPink">Light Pink</option>
+                            </Select>
+                        </div>
+                    </div>
+                    <fieldset class="uk-fieldset uk-margin-top">
+                        <button class="uk-button uk-button-primary">Update Calendar</button>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        var frmAdd = $('#addform');
+        frmAdd.submit(function(e) {
             e.preventDefault();
-
             $.ajax({
-                type: frm.attr('method'),
-                url: frm.attr('action'),
-                data: frm.serialize(),
+                type: frmAdd.attr('method'),
+                url: frmAdd.attr('action'),
+                data: frmAdd.serialize(),
                 success: function (data) {
                     UIkit.notification({message: 'Update was successful.', status: 'success'});
+                    UIkit.modal($("#newCalendarModal")).hide();
+                    $('#addName').val('');
+                    $('#addGoogleCode').val('');
+                    document.location.reload();
                 },
                 error: function (data) {
                     console.log(data)
@@ -96,6 +187,83 @@
                 }
             });
         });
-    </script>
+
+        var frmUpd = $('#updform');
+        frmUpd.submit(function(e) {
+            e.preventDefault();
+            $.ajax({
+                type: frmUpd.attr('method'),
+                url: frmUpd.attr('action'),
+                data: frmUpd.serialize(),
+                success: function (data) {
+                    UIkit.notification({message: 'Update was successful.', status: 'success'});
+                    UIkit.modal($("#updCalendarModal")).hide();
+                    $('#updID').val('');
+                    $('#updName').val('');
+                    document.location.reload();
+                },
+                error: function (data) {
+                    console.log(data)
+                    UIkit.notification({message: data.responseText, status: 'danger'})
+                }
+            });
+        });
+
+        function onEditClick(id) {
+            $.ajax({
+                type: "GET",
+                url: "/config/get/" + id,
+                success: function (data) {
+                    console.log(data.colour);
+                    $('#updID').val(data.id);
+                    $('#updName').val(data.name);
+                    $('#updColour').val(data.colour).change();
+                    UIkit.modal($("#updCalendarModal")).show();
+                },
+                error: function (data) {
+                    console.log(data);
+                    UIkit.notification({message: data.responseText, status: 'danger'});
+                }
+            });
+        }
+
+        function onRemoveClick(id) {
+            UIkit.modal.confirm('Do you want to remove the selected calendar?').then(function() {
+                $.ajax({
+                    type: "POST",
+                    url: "/config/remove/" + id,
+                    success: function (data) {
+                        UIkit.notification({message: 'Remove was successful.', status: 'success'});
+                        document.location.reload();
+                    },
+                    error: function (data) {
+                        console.log(data)
+                        UIkit.notification({message: data.responseText, status: 'danger'})
+                    }
+                });
+            }, function () {
+                // Rejected
+            });
+        }
+
+        function onGoogleAuthenticate() {
+            var url = "{{.GoogleURL}}";
+            var myWindow = window.open(url, "", "width=800,height=600");
+            return;
+            console.log("Authenticate with google clicked.");
+            $.ajax({
+                type: "GET",
+                url: "/calendar/googleurl",
+                success: function (url) {
+                    var myWindow = window.open("", "", "width=200,height=100");
+                },
+                error: function (data) {
+                    console.log(data)
+                    UIkit.notification({message: data.responseText, status: 'danger'})
+                }
+            });
+        }
+
+    </script>      
 </body>
 </html>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -15,6 +16,8 @@ type ConfigController struct {
 
 // ConfigPageData holds the data used to write to the configuration page.
 type ConfigPageData struct {
+	GoogleURL string
+	Calendars []CalConfig
 }
 
 // AddController adds the controller routes to the router
@@ -23,16 +26,34 @@ func (c *ConfigController) AddController(router *mux.Router, s *Server) {
 	router.Path("/config.html").Handler(http.HandlerFunc(c.handleConfigWebPage))
 	router.Methods("GET").Path("/config/get").Name("GetConfig").
 		Handler(Logger(c, http.HandlerFunc(c.handleGetConfig)))
-	router.Methods("POST").Path("/config/set").Name("SetConfig").
-		Handler(Logger(c, http.HandlerFunc(c.handleSetConfig)))
+	router.Methods("GET").Path("/config/get/{id}").Name("GetCalendar").
+		Handler(Logger(c, http.HandlerFunc(c.handleGetCalendar)))
+	router.Methods("POST").Path("/config/add").Name("AddCalendar").
+		Handler(Logger(c, http.HandlerFunc(c.handleAddCalendar)))
+	router.Methods("POST").Path("/config/update").Name("UpdateCalendar").
+		Handler(Logger(c, http.HandlerFunc(c.handleUpdateCalendar)))
+	router.Methods("POST").Path("/config/remove/{id}").Name("RemoveCalendar").
+		Handler(Logger(c, http.HandlerFunc(c.handleRemoveCalendar)))
 }
 
 func (c *ConfigController) handleConfigWebPage(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("./html/config.html"))
 
-	v := ConfigPageData{}
+	gc := new(GCalendar)
+	gurl, err := gc.GetAuthenticateURL()
+	if err != nil {
+		http.Error(w, "Error getting Google Authentication URL.", 500)
+		return
+	}
 
-	t.Execute(w, v)
+	v := ConfigPageData{
+		Calendars: c.Srv.Config.Calendars,
+		GoogleURL: gurl,
+	}
+
+	if err := t.Execute(w, v); err != nil {
+		http.Error(w, "Error getting web page. "+err.Error(), 500)
+	}
 }
 
 func (c *ConfigController) handleGetConfig(w http.ResponseWriter, r *http.Request) {
@@ -41,12 +62,158 @@ func (c *ConfigController) handleGetConfig(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (c *ConfigController) handleSetConfig(w http.ResponseWriter, r *http.Request) {
+func (c *ConfigController) handleGetCalendar(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	if id == "" {
+		http.Error(w, "Calendar identifier not specified", 500)
+		return
+	}
+
+	for _, i := range c.Srv.Config.Calendars {
+		if i.ID == id {
+			if err := i.WriteTo(w); err != nil {
+				http.Error(w, "Error serializing calendar configuration. "+err.Error(), 500)
+			}
+			return
+		}
+	}
+	http.Error(w, "Invalid calendar identifier", 500)
+}
+
+func (c *ConfigController) handleAddCalendar(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	c.Srv.Config.SetDefaults()
+	nc := NewCalConfig{
+		Name:     r.Form.Get("addName"),
+		Colour:   r.Form.Get("addColour"),
+		Provider: r.Form.Get("addProvider"),
+	}
 
-	c.Srv.Config.WriteToFile("config.json")
+	// Check name or colour does not already exist
+	for _, i := range c.Srv.Config.Calendars {
+		if i.Name == nc.Name {
+			http.Error(w, "This name has already been used.  Please select another name.", 500)
+			return
+		}
+		if i.Colour == nc.Colour {
+			http.Error(w, "This colour has already been used.  Please select another colour.", 500)
+			return
+		}
+	}
+
+	// Get the calendar provider
+	p, err := c.getCalendarProvider(nc.Provider)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	switch nc.Provider {
+	case "Google":
+		nc.AuthCode = r.Form.Get("addGoogleCode")
+	}
+	// Validate the config
+	cc, err := p.ValidateNewConfig(nc)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	// Append the new configuration
+	c.Srv.Config.Calendars = append(c.Srv.Config.Calendars, cc)
+	err = c.Srv.Config.WriteToFile("config.json")
+	if err != nil {
+		m := fmt.Sprintf("Error saving config.json file. %s", err.Error())
+		c.LogError(m)
+		http.Error(w, m, 500)
+	}
+}
+
+func (c *ConfigController) handleUpdateCalendar(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	id := r.Form.Get("updID")
+	if id == "" {
+		http.Error(w, "Calendar ID not specified", 500)
+		return
+	}
+
+	cals := []CalConfig{}
+	found := true
+	for _, i := range c.Srv.Config.Calendars {
+		if i.ID == id {
+			cc := CalConfig{
+				ID:       id,
+				Name:     r.Form.Get("updName"),
+				Provider: i.Provider,
+				Colour:   r.Form.Get("updColour"),
+			}
+
+			p, err := c.getCalendarProvider(i.Provider)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			cc, err = p.ValidateConfig(cc)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+
+			cals = append(cals, cc)
+			found = true
+		} else {
+			cals = append(cals, i)
+		}
+	}
+
+	if found {
+		c.Srv.Config.Calendars = cals
+		if err := c.Srv.Config.WriteToFile("config.json"); err != nil {
+			m := fmt.Sprintf("Error writing config.json file. %s", err.Error())
+			c.LogError(m)
+			http.Error(w, m, 500)
+		}
+	} else {
+		http.Error(w, "Invalid calendar identifier", 500)
+	}
+}
+
+func (c *ConfigController) handleRemoveCalendar(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	if id == "" {
+		http.Error(w, "Calendar identifier not specified", 500)
+		return
+	}
+
+	cl := []CalConfig{}
+	calRemoved := false
+	for _, i := range c.Srv.Config.Calendars {
+		if i.ID == id {
+			c.LogInfo(fmt.Sprintf("Calendar %s removed.", i.Name))
+			calRemoved = true
+		} else {
+			cl = append(cl, i)
+		}
+	}
+	if !calRemoved {
+		http.Error(w, "Invalid calendar identifier", 500)
+	} else {
+		c.Srv.Config.Calendars = cl
+		if err := c.Srv.Config.WriteToFile("config.json"); err != nil {
+			c.LogError(fmt.Sprintf("Error writing config.json file. %s", err.Error()))
+		}
+	}
+}
+
+func (c *ConfigController) getCalendarProvider(provider string) (CalendarProvider, error) {
+	switch provider {
+	case "Google":
+		return new(GCalendar), nil
+	default:
+		m := fmt.Sprintf("Invalid Calendar provider '%s'", provider)
+		return nil, errors.New(m)
+	}
 }
 
 // LogInfo is used to log information messages for this controller.

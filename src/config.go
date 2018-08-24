@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"image"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,10 +15,18 @@ type Config struct {
 
 // CalConfig holds the configuration details for a specific calendar
 type CalConfig struct {
-	ID       string     `json:"id"`     // Unique identifier of this calendar (GUID)
-	Name     string     `json:"name"`   // Display name of the calendar
-	Provider int        `json:"type"`   // Provider type. 0=Google Calendar
-	Colour   image.RGBA `json:"colour"` // Display colour
+	ID       string `json:"id"`       // Unique identifier of this calendar (GUID)
+	Name     string `json:"name"`     // Display name of the calendar
+	Provider string `json:"provider"` // Provider type.
+	Colour   string `json:"colour"`   // Display colour
+}
+
+// NewCalConfig holds the details about a new calendar configuration
+type NewCalConfig struct {
+	Name     string `json:"name"`     // Display name of the calendar
+	Provider string `json:"provider"` // Calendar provider
+	Colour   string `json:"colour"`   // Display Colour
+	AuthCode string `json:"authCode"` // Authorization Code
 }
 
 // ReadFromFile will read the configuration settings from the specified file
@@ -87,4 +94,15 @@ func (c *Config) Deserialize(v string) error {
 func (c *Config) SetDefaults() {
 	// Set any defaults required
 
+}
+
+// WriteTo serializes the entity and writes it to the http response
+func (c *CalConfig) WriteTo(w http.ResponseWriter) error {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Write(b)
+	return nil
 }

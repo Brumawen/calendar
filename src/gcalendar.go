@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
@@ -23,6 +24,11 @@ type GCalendar struct {
 // SetConfig sets the configuration for this calendar provider
 func (g *GCalendar) SetConfig(c CalConfig) {
 	g.CalConfig = c
+}
+
+// ProviderName returns the name of the provider
+func (g *GCalendar) ProviderName() string {
+	return "Google"
 }
 
 // GetEvents returns the calendar events
@@ -87,6 +93,79 @@ func (g *GCalendar) GetEvents(noDays int) (CalEvents, error) {
 	return evts, nil
 }
 
+// GetAuthenticateURL returns the URL that will be used to choose the calendar and
+// authenticate with Google.
+func (g *GCalendar) GetAuthenticateURL() (string, error) {
+	config, err := g.getConfig()
+	if err != nil {
+		return "", err
+	}
+
+	url := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	return url, nil
+}
+
+// ValidateConfig validates the configuration change for the calendar
+// and returns the calendar configuation ready to save
+func (g *GCalendar) ValidateConfig(c CalConfig) (CalConfig, error) {
+	if c.ID == "" {
+		return c, errors.New("ID must be specified")
+	}
+	if c.Name == "" {
+		return c, errors.New("Name must be specified")
+	}
+	if c.Colour == "" {
+		return c, errors.New("Colour must be specified")
+	}
+	return c, nil
+}
+
+// ValidateNewConfig validates the new configuration values
+// and returns the calendar configuration ready to save
+func (g *GCalendar) ValidateNewConfig(c NewCalConfig) (CalConfig, error) {
+	cc := CalConfig{}
+
+	// Validate the token
+	config, err := g.getConfig()
+	if err != nil {
+		return cc, err
+	}
+
+	if c.Name == "" {
+		return cc, errors.New("Name must be specified")
+	}
+	if c.AuthCode == "" {
+		return cc, errors.New("Authentication code must be specified")
+	}
+	if c.Colour == "" {
+		return cc, errors.New("Colour must be selected")
+	}
+
+	// Get the token
+	token, err := config.Exchange(oauth2.NoContext, c.AuthCode)
+	if err != nil {
+		m := fmt.Sprintf("Unable to retrieve authentication token. %v", err)
+		return cc, errors.New(m)
+	}
+
+	// Generate a new ID
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		return cc, errors.New("Error creating GUID. " + err.Error())
+	}
+	cc.ID = uuid.String()
+	cc.Name = c.Name
+	cc.Provider = g.ProviderName()
+	cc.Colour = c.Colour
+
+	// Save the token
+	err = g.saveTokenToFile(cc.ID, token)
+	if err != nil {
+		return cc, err
+	}
+	return cc, nil
+}
+
 func (g *GCalendar) getTime(a string, b string) (time.Time, error) {
 	l := "2006-01-02T15:04:05-07:00"
 	if a == "" {
@@ -95,20 +174,23 @@ func (g *GCalendar) getTime(a string, b string) (time.Time, error) {
 	return time.Parse(l, a)
 }
 
-func (g *GCalendar) getClient() (*http.Client, error) {
+func (g *GCalendar) getConfig() (*oauth2.Config, error) {
 	// Read the credentials
 	b, err := ioutil.ReadFile("credentials.json")
 	if err != nil {
 		return nil, errors.New("Error reading credentials.json file. " + err.Error())
 	}
 
-	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
+	return google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
+}
+
+func (g *GCalendar) getClient() (*http.Client, error) {
+	config, err := g.getConfig()
 	if err != nil {
-		return nil, errors.New("Error parsing credentials.json file. " + err.Error())
+		return nil, err
 	}
 
-	tokenFile := fmt.Sprintf("Token_%s.json", g.CalConfig.ID)
-	token, err := g.getTokenFromFile(tokenFile)
+	token, err := g.getTokenFromFile(g.CalConfig.ID)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading token file for %s. %s", g.CalConfig.Name, err.Error())
 	}
@@ -117,8 +199,9 @@ func (g *GCalendar) getClient() (*http.Client, error) {
 }
 
 // Retrieves a token from a local file.
-func (g *GCalendar) getTokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
+func (g *GCalendar) getTokenFromFile(id string) (*oauth2.Token, error) {
+	tokenFile := fmt.Sprintf("Token_%s.json", id)
+	f, err := os.Open(tokenFile)
 	defer f.Close()
 	if err != nil {
 		return nil, err
@@ -126,4 +209,15 @@ func (g *GCalendar) getTokenFromFile(file string) (*oauth2.Token, error) {
 	token := &oauth2.Token{}
 	err = json.NewDecoder(f).Decode(token)
 	return token, err
+}
+
+func (g *GCalendar) saveTokenToFile(id string, token *oauth2.Token) error {
+	tokenFile := fmt.Sprintf("Token_%s.json", id)
+	f, err := os.OpenFile(tokenFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	defer f.Close()
+	if err != nil {
+		return fmt.Errorf("Unable to cache oauth token: %v", err)
+	}
+	json.NewEncoder(f).Encode(token)
+	return nil
 }
