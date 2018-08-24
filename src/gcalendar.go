@@ -26,6 +26,15 @@ func (g *GCalendar) SetConfig(c CalConfig) {
 	g.CalConfig = c
 }
 
+// RemovedConfig is used to clean up after config has been removed
+func (g *GCalendar) RemovedConfig(c CalConfig) error {
+	tokenFile := fmt.Sprintf("Token_%s.json", c.ID)
+	if _, err := os.Stat(tokenFile); err == nil {
+		return os.Remove(tokenFile)
+	}
+	return nil
+}
+
 // ProviderName returns the name of the provider
 func (g *GCalendar) ProviderName() string {
 	return "Google"

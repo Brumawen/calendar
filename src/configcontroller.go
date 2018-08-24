@@ -187,22 +187,37 @@ func (c *ConfigController) handleRemoveCalendar(w http.ResponseWriter, r *http.R
 	}
 
 	cl := []CalConfig{}
-	calRemoved := false
+	ri := CalConfig{}
+	found := false
 	for _, i := range c.Srv.Config.Calendars {
 		if i.ID == id {
 			c.LogInfo(fmt.Sprintf("Calendar %s removed.", i.Name))
-			calRemoved = true
+			ri = i
+			found = true
 		} else {
 			cl = append(cl, i)
 		}
 	}
-	if !calRemoved {
-		http.Error(w, "Invalid calendar identifier", 500)
-	} else {
+	if found {
 		c.Srv.Config.Calendars = cl
 		if err := c.Srv.Config.WriteToFile("config.json"); err != nil {
-			c.LogError(fmt.Sprintf("Error writing config.json file. %s", err.Error()))
+			m := fmt.Sprintf("Error writing config.json file. %s", err.Error())
+			c.LogError(m)
+			http.Error(w, m, 500)
+		} else {
+			if p, err := c.getCalendarProvider(ri.Provider); err == nil {
+				err = p.RemovedConfig(ri)
+				if err != nil {
+					m := fmt.Sprintf("Error cleaning up %s for removed config item %s. %s", p.ProviderName(), ri.ID, err.Error())
+					c.LogError(m)
+					m = fmt.Sprintf("%v", ri)
+					c.LogError(m)
+				}
+			}
 		}
+
+	} else {
+		http.Error(w, "Invalid calendar identifier", 500)
 	}
 }
 
