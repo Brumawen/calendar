@@ -91,6 +91,7 @@ func (g *GCalendar) GetEvents(noDays int) (CalEvents, error) {
 					Summary:     item.Summary,
 					Description: item.Description,
 					Location:    item.Location,
+					Colour:      g.CalConfig.Colour,
 				})
 			}
 		}

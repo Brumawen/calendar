@@ -29,6 +29,7 @@ type CalEvent struct {
 	Summary     string    `json:"summary"`     // Summary of the event
 	Location    string    `json:"location"`    // Location of the event
 	Description string    `json:"description"` // Description of the event
+	Colour      string    `json:"colour"`      // Colour of the event
 }
 
 // ReadFromFile will read the calendar events from the specified file
