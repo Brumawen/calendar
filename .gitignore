@@ -13,3 +13,4 @@
 credentials.json
 token*.json
 last*.json
+src/config.json

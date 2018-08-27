@@ -49,7 +49,7 @@ func (c *CalendarController) handleGetCalendars(w http.ResponseWriter, r *http.R
 		}
 	}
 	sort.Slice(el, func(i, j int) bool {
-		return el[i].Start.After(el[j].Start)
+		return el[j].Start.After(el[i].Start)
 	})
 
 	if b, err := json.Marshal(el); err != nil {
