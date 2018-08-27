@@ -19,8 +19,30 @@ type CalendarController struct {
 // AddController adds the controller routes to the router
 func (c *CalendarController) AddController(router *mux.Router, s *Server) {
 	c.Srv = s
+	router.Methods("GET").Path("/calendar/get").Name("GetNames").
+		Handler(Logger(c, http.HandlerFunc(c.handleGetNames)))
 	router.Methods("GET").Path("/calendar/get/{noDays}").Name("GetCalendars").
 		Handler(Logger(c, http.HandlerFunc(c.handleGetCalendars)))
+}
+
+func (c *CalendarController) handleGetNames(w http.ResponseWriter, r *http.Request) {
+	l := []CalName{}
+
+	for _, i := range c.Srv.Config.Calendars {
+		l = append(l, CalName{
+			Name:   i.Name,
+			Colour: i.Colour,
+		})
+	}
+
+	if b, err := json.Marshal(l); err != nil {
+		m := fmt.Sprintf("Error serializing calendar names. %s", err.Error())
+		c.LogError(m)
+		http.Error(w, m, 500)
+	} else {
+		w.Header().Set("content-type", "application/json")
+		w.Write(b)
+	}
 }
 
 func (c *CalendarController) handleGetCalendars(w http.ResponseWriter, r *http.Request) {
