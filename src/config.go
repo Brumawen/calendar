@@ -19,6 +19,7 @@ type CalConfig struct {
 	Name     string `json:"name"`     // Display name of the calendar
 	Provider string `json:"provider"` // Provider type.
 	Colour   string `json:"colour"`   // Display colour
+	URL      string `json:"url"`      // Calendar URL
 }
 
 // NewCalConfig holds the details about a new calendar configuration
@@ -27,6 +28,7 @@ type NewCalConfig struct {
 	Provider string `json:"provider"` // Calendar provider
 	Colour   string `json:"colour"`   // Display Colour
 	AuthCode string `json:"authCode"` // Authorization Code
+	URL      string `json:"url"`      // Calendar URL
 }
 
 // ReadFromFile will read the configuration settings from the specified file

@@ -60,14 +60,18 @@ func GetDurationString(start time.Time, end time.Time) string {
 	m := math.Mod(d.Minutes(), 60)
 
 	r := ""
-	if h > 0 {
-		r = r + fmt.Sprintf("%2.fh", h)
-	}
-	if m != 0 {
-		if r != "" {
-			r = r + " "
+	if h == 24 && m == 0 {
+		r = "All Day"
+	} else {
+		if h > 0 {
+			r = r + fmt.Sprintf("%2.fh", h)
 		}
-		r = r + fmt.Sprintf("%2.fm", m)
+		if m != 0 {
+			if r != "" {
+				r = r + " "
+			}
+			r = r + fmt.Sprintf("%2.fm", m)
+		}
 	}
 	return strings.Trim(r, " ")
 }

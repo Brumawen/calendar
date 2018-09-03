@@ -91,6 +91,10 @@ func (c *CalendarController) getCalendarProvider(cc CalConfig) (CalendarProvider
 		gc := new(GCalendar)
 		gc.SetConfig(cc)
 		return gc, nil
+	case "iCal":
+		ic := new(ICalFeed)
+		ic.SetConfig(cc)
+		return ic, nil
 	default:
 		m := fmt.Sprintf("Invalid Calendar provider '%s'", cc.Provider)
 		c.LogError(m)

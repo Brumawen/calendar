@@ -93,12 +93,13 @@
                             Calendar Provider
                         </label>
                         <div class="uk-form-controls">
-                            <Select class="uk-select uk-form-width-large" id="addProvider" name="addProvider">
+                            <Select class="uk-select uk-form-width-large" id="addProvider" name="addProvider" onchange="onProviderSelect()">
                                 <option value="Google">Google Calendar</option>
+                                <option value="iCal">iCal Public Feed</option>
                             </Select>
                         </div>
                     </div>
-                    <fieldset class="uk-fieldset uk-margin-top">
+                    <fieldset id="addGoogleCal" class="uk-fieldset uk-margin-top">
                         <legend class="uk-legend">Google Calendar</legend>
                         <div class="uk-margin">
                             <button class="uk-button uk-button-default" type="button" onclick="onGoogleAuthenticate()">Select Google Calendar</button>
@@ -109,6 +110,17 @@
                             </label>
                             <div class="uk-form-controls">
                                 <input class="uk-input uk-form-width-large" id="addGoogleCode" name="addGoogleCode" type="text" placeholder="Paste Authentication Code Here">
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset id="addiCal" class="uk-fieldset uk-margin-top">
+                        <legend class="uk-legend">iCal Calendar Feed</legend>
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="addiCalUrl">
+                                iCal Feed URL
+                            </label>
+                            <div class="uk-form-controls">
+                                <input class="uk-input uk-form-width-large" id="addiCalUrl" name="addiCalUrl" type="text" placeholder="iCal Feed URL">
                             </div>
                         </div>
                     </fieldset>
@@ -134,7 +146,7 @@
                         <input class="uk-input uk-form-width-large" id="updID" name="updID" type="text" readonly="readonly">
                     </div>
                     <div class="uk-margin">
-                    <label class="uk-form-label" for="updName">
+                        <label class="uk-form-label" for="updName">
                             Calendar Name
                         </label>
                         <div class="uk-form-controls">
@@ -159,6 +171,15 @@
                             </Select>
                         </div>
                     </div>
+                    <div class="uk-margin" id="updUrlField">
+                        <label class="uk-form-label" for="updUrl">
+                            URL
+                        </label>
+                        <div class="uk-form-controls">
+                            <input class="uk-input uk-form-width-large" id="updUrl" name="updUrl" type="text" placeholder="URL">
+                        </div>
+                    </div>  
+
                     <fieldset class="uk-fieldset uk-margin-top">
                         <button class="uk-button uk-button-primary">Update Calendar</button>
                     </fieldset>
@@ -187,6 +208,23 @@
                 }
             });
         });
+
+        $('#addiCal').css("display", "none")
+
+        function onProviderSelect() {
+            var obj = $('#addProvider')[0];
+            switch(obj.selectedIndex) {
+                case 0:
+                    $('#addGoogleCal').css("display", "")
+                    $('#addiCal').css("display", "none")
+                    break;
+                case 1:
+                    $('#addGoogleCal').css("display", "none")
+                    $('#addiCal').css("display", "")
+                    break;
+            }
+            console.log("Provider Selected");
+        }
 
         var frmUpd = $('#updform');
         frmUpd.submit(function(e) {
@@ -218,6 +256,16 @@
                     $('#updID').val(data.id);
                     $('#updName').val(data.name);
                     $('#updColour').val(data.colour).change();
+                    switch(data.provider) {
+                        case "Google":
+                            $('#updUrl').val('');
+                            $('#updUrlField').css("display", "none")
+                            break;
+                        case "iCal":
+                            $('#updUrl').val(data.url);
+                            $('#updUrlField').css("display", "")
+                            break;
+                    }
                     UIkit.modal($("#updCalendarModal")).show();
                 },
                 error: function (data) {

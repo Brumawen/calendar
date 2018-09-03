@@ -111,6 +111,8 @@ func (c *ConfigController) handleAddCalendar(w http.ResponseWriter, r *http.Requ
 	switch nc.Provider {
 	case "Google":
 		nc.AuthCode = r.Form.Get("addGoogleCode")
+	case "iCal":
+		nc.URL = r.Form.Get("addiCalUrl")
 	}
 	// Validate the config
 	cc, err := p.ValidateNewConfig(nc)
@@ -225,6 +227,8 @@ func (c *ConfigController) getCalendarProvider(provider string) (CalendarProvide
 	switch provider {
 	case "Google":
 		return new(GCalendar), nil
+	case "iCal":
+		return new(ICalFeed), nil
 	default:
 		m := fmt.Sprintf("Invalid Calendar provider '%s'", provider)
 		return nil, errors.New(m)
