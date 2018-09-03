@@ -68,14 +68,15 @@ func (g *GCalendar) GetEvents(noDays int) (CalEvents, error) {
 	events, err := srv.Events.List("primary").
 		ShowDeleted(false).SingleEvents(true).
 		TimeMin(timeMin).TimeMax(timeMax).
-		OrderBy("startTime").Do()
+		OrderBy("startTime").
+		Do()
 	if err != nil {
 		evts.ReadFromFile(lastFName)
 		return evts, fmt.Errorf("Error retrieving calendar events. %s", err.Error())
 	}
 
-	// b, err := json.Marshal(events)
-	// ioutil.WriteFile("events.json", b, 0666)
+	b, err := json.Marshal(events)
+	ioutil.WriteFile("events.json", b, 0666)
 
 	for _, item := range events.Items {
 		if st, err := g.getTime(item.Start.DateTime, item.Start.Date); err == nil {
@@ -177,11 +178,10 @@ func (g *GCalendar) ValidateNewConfig(c NewCalConfig) (CalConfig, error) {
 }
 
 func (g *GCalendar) getTime(a string, b string) (time.Time, error) {
-	l := "2006-01-02T15:04:05-07:00"
 	if a == "" {
-		return time.Parse(l, b)
+		return time.Parse("2006-01-02", b)
 	}
-	return time.Parse(l, a)
+	return time.Parse("2006-01-02T15:04:05-07:00", a)
 }
 
 func (g *GCalendar) getConfig() (*oauth2.Config, error) {
