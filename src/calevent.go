@@ -63,7 +63,7 @@ func GetDurationString(start time.Time, end time.Time) string {
 	if h == 24 && m == 0 {
 		r = "All Day"
 	} else {
-		if h > 0 {
+		if h >= 1 {
 			r = r + fmt.Sprintf("%2.fh", h)
 		}
 		if m != 0 {
