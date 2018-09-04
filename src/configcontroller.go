@@ -149,6 +149,10 @@ func (c *ConfigController) handleUpdateCalendar(w http.ResponseWriter, r *http.R
 				Provider: i.Provider,
 				Colour:   r.Form.Get("updColour"),
 			}
+			switch cc.Provider {
+			case "iCal":
+				cc.URL = r.Form.Get("updUrl")
+			}
 
 			p, err := c.getCalendarProvider(i.Provider)
 			if err != nil {

@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-func TestCanRetrieveCalendarEvents(t *testing.T) {
-
-}
-
 func TestCanGetGoogleEvents(t *testing.T) {
 	c := CalConfig{
 		ID:   "testok",
