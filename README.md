@@ -40,7 +40,7 @@ To Edit a calendar
 
 To Remove a calendar
 * Click the Remove button to the right of the calendar you wish to remove.
-* Clicj the OK button on the confirmation dialog.
+* Click the OK button on the confirmation dialog.
 
 ### Configuring a Google Calendar
 
@@ -51,3 +51,6 @@ To Remove a calendar
 * Switch back to the configuration page.
 * Paste the code text into the Authentication Code text box.
 
+### Configuring a iCal Public Feed
+
+* Copy and paste the iCal feed URL into the iCal Feed URL text box.
