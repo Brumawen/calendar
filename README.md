@@ -1,6 +1,6 @@
 # calendar
 
-Calendar is a microserice that can be used to retrieve upcoming events for one or more calendars.
+Calendar is a microservice that can be used to retrieve upcoming events for one or more calendars.
 
 ## Installation
 
