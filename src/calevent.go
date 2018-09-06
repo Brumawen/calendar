@@ -12,15 +12,17 @@ import (
 
 // CalEvents holds a collection of calendar events as returned by a provider
 type CalEvents struct {
-	Created time.Time  `json:"created"` // Date calendar events were retrieved
-	NoDays  int        `json:"noDays"`  // Number of days retrieved
-	Events  []CalEvent `json:"events"`  // List of calendar events
+	Created    time.Time  `json:"created"`    // Date calendar events were retrieved
+	NoDays     int        `json:"noDays"`     // Number of days retrieved
+	EventCount int        `json:"eventCount"` // Event count
+	Events     []CalEvent `json:"events"`     // List of calendar events
 }
 
 // CalEvent holds the calendar event details
 type CalEvent struct {
 	ID          string    `json:"id"`          // Identifier of the calendar
 	Name        string    `json:"name"`        // Name of the calendar
+	UID         string    `json:"uid"`         // UID of the event
 	Start       time.Time `json:"start"`       // Start time
 	End         time.Time `json:"end"`         // End time
 	DayName     string    `json:"dayName"`     // Name of the day

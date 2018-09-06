@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/luxifer/ical"
+	"github.com/brumawen/ical"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -38,44 +39,61 @@ func (p *ICalFeed) GetEvents(noDays int) (CalEvents, error) {
 	}
 	lastFName := fmt.Sprintf("lastevents_%s.json", p.CalConfig.ID)
 
-	resp, err := http.Get(p.CalConfig.URL)
-	if resp != nil {
-		defer resp.Body.Close()
-		resp.Close = true
-	}
-	if err != nil {
-		evts.ReadFromFile(lastFName)
-		return evts, fmt.Errorf("Error getting feed. %s", err.Error())
-	}
-	c, err := ical.Parse(resp.Body, time.Local)
-	if err != nil {
-		evts.ReadFromFile(lastFName)
-		return evts, fmt.Errorf("Error parsing feed. %s", err.Error())
-	}
-	ts := time.Now()
-	te := time.Now().Add(time.Duration(noDays*24) * time.Hour)
-	if len(c.Events) != 0 {
-		for _, e := range c.Events {
-			if e.StartDate.Equal(ts) || (e.StartDate.After(ts) && e.StartDate.Before(te)) {
-				evts.Events = append(evts.Events, CalEvent{
-					ID:          p.CalConfig.ID,
-					Name:        p.CalConfig.Name,
-					Start:       e.StartDate,
-					End:         e.EndDate,
-					DayName:     e.StartDate.Weekday().String(),
-					Time:        e.StartDate.Format("15:04"),
-					Duration:    GetDurationString(e.StartDate, e.EndDate),
-					Summary:     e.Summary,
-					Description: e.Description,
-					Colour:      p.CalConfig.Colour,
-				})
+	// Split the URL by lines
+	urls := strings.Split(strings.Replace(p.CalConfig.URL, "\r", "", -1), "\n")
+
+	for _, u := range urls {
+		resp, err := http.Get(strings.TrimSpace(u))
+		if resp != nil {
+			defer resp.Body.Close()
+			resp.Close = true
+		}
+		if err != nil {
+			evts.ReadFromFile(lastFName)
+			return evts, fmt.Errorf("Error getting feed. %s", err.Error())
+		}
+		c, err := ical.Parse(resp.Body, time.Local)
+		if err != nil {
+			evts.ReadFromFile(lastFName)
+			return evts, fmt.Errorf("Error parsing feed. %s", err.Error())
+		}
+		ts := time.Now()
+		te := time.Now().Add(time.Duration(noDays*24) * time.Hour)
+		if len(c.Events) != 0 {
+			for _, e := range c.Events {
+				if e.StartDate.Equal(ts) || (e.StartDate.After(ts) && e.StartDate.Before(te)) {
+					// Check if we have already loaded the event
+					exists := false
+					for _, x := range evts.Events {
+						if x.UID == e.UID {
+							exists = true
+							break
+						}
+					}
+					if !exists {
+						// New event
+						evts.Events = append(evts.Events, CalEvent{
+							ID:          p.CalConfig.ID,
+							Name:        p.CalConfig.Name,
+							UID:         e.UID,
+							Start:       e.StartDate,
+							End:         e.EndDate,
+							DayName:     e.StartDate.Weekday().String(),
+							Time:        e.StartDate.Format("15:04"),
+							Duration:    GetDurationString(e.StartDate, e.EndDate),
+							Summary:     e.Summary,
+							Description: e.Description,
+							Colour:      p.CalConfig.Colour,
+						})
+					}
+				}
 			}
 		}
 	}
+	evts.EventCount = len(evts.Events)
 
 	// Save a copy of these events
 	evts.WriteToFile(lastFName)
-
 	return evts, nil
 }
 

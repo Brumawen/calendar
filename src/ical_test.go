@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luxifer/ical"
+	"github.com/brumawen/ical"
 )
 
 func TestCanGetIcalFeed(t *testing.T) {
 	resp, err := http.Get("https://calendar.google.com/calendar/ical/en.sa%23holiday%40group.v.calendar.google.com/public/basic.ics")
+
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -49,10 +50,11 @@ func TestCanParseIcalFeed(t *testing.T) {
 }
 
 func TestCanGetICalEvents(t *testing.T) {
+	url := "https://calendar.google.com/calendar/ical/en.sa%23holiday%40group.v.calendar.google.com/public/basic.ics"
 	c := CalConfig{
 		ID:   "testical",
 		Name: "Test iCal",
-		URL:  "https://calendar.google.com/calendar/ical/en.sa%23holiday%40group.v.calendar.google.com/public/basic.ics",
+		URL:  fmt.Sprintf("%s\n%s", url, url),
 	}
 
 	p := ICalFeed{CalConfig: c}
@@ -62,5 +64,8 @@ func TestCanGetICalEvents(t *testing.T) {
 	}
 	if len(l.Events) == 0 {
 		t.Error(errors.New("No events returned"))
+	} else if len(l.Events) != 21 {
+		t.Errorf("Wrong number of events returned. Expected %d, got %d", 21, len(l.Events))
 	}
+
 }
